@@ -179,6 +179,7 @@
     <div class="controls">
       <button class="btn-pause" id="pauseBtn" onclick="togglePause()">Pause Bot</button>
       <button class="btn-danger" id="liquidateBtn" onclick="liquidateAll()">Liquidate All</button>
+      <button onclick="logout()" style="margin-left: auto">Logout</button>
     </div>
 
     <div class="grid">
@@ -381,6 +382,11 @@
         } catch (err) {
           console.error('Failed to liquidate', err);
         }
+      };
+
+      const logout = async () => {
+        await fetch('/auth/logout', { method: 'POST' });
+        window.location.href = '/login';
       };
 
       fetchStatus();

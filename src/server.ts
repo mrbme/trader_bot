@@ -5,8 +5,62 @@ import { getState, updateState, saveState } from '@/state/store.ts';
 import { logger } from '@/utils/logger.ts';
 import config from '@/utils/config.ts';
 
+const SESSION_COOKIE = 'bot_session';
+const sessions = new Set<string>();
+
+const generateToken = (): string => {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+};
+
+const parseCookies = (header: string | null): Record<string, string> => {
+  if (!header) return {};
+  return Object.fromEntries(
+    header.split(';').map((c) => {
+      const [key, ...rest] = c.trim().split('=');
+      return [key, rest.join('=')];
+    }),
+  );
+};
+
+const isAuthenticated = (request: Request): boolean => {
+  if (!config.dashboardPassword) return true;
+  const cookies = parseCookies(request.headers.get('cookie'));
+  return sessions.has(cookies[SESSION_COOKIE] ?? '');
+};
+
 export const createServer = () => {
   const app = new Elysia()
+    .get('/login', () => Bun.file('public/login.html'))
+
+    .post('/auth/login', ({ body, set }) => {
+      const { password } = body as { password: string };
+      if (!config.dashboardPassword || password === config.dashboardPassword) {
+        const token = generateToken();
+        sessions.add(token);
+        set.headers['set-cookie'] =
+          `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800`;
+        return { ok: true };
+      }
+      set.status = 401;
+      return { ok: false };
+    })
+
+    .post('/auth/logout', ({ set }) => {
+      set.headers['set-cookie'] =
+        `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;
+      return { ok: true };
+    })
+
+    .onBeforeHandle(({ request, set, path }) => {
+      if (path === '/login' || path.startsWith('/auth/')) return;
+      if (!isAuthenticated(request)) {
+        set.status = 302;
+        set.headers['location'] = '/login';
+        return 'Redirecting to login';
+      }
+    })
+
     .get('/', () => Bun.file('public/index.html'))
 
     .get('/api/status', async () => {

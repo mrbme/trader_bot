@@ -9,6 +9,7 @@ export const config = {
   logLevel: (Bun.env.LOG_LEVEL ?? 'info') as 'debug' | 'info' | 'warn' | 'error',
   port: parseInt(Bun.env.PORT ?? '3000', 10),
   dataDir: Bun.env.DATA_DIR ?? './data',
+  dashboardPassword: Bun.env.DASHBOARD_PASSWORD ?? '',
 } as const;
 
 export const SYMBOLS = ['BTC/USD', 'ETH/USD', 'SOL/USD', 'DOGE/USD', 'LINK/USD'] as const;
