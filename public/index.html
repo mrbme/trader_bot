@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crypto Vol Bot</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+        background: #0d1117;
+        color: #c9d1d9;
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        color: #58a6ff;
+        margin-bottom: 8px;
+        font-size: 1.4rem;
+      }
+      .subtitle {
+        color: #8b949e;
+        margin-bottom: 24px;
+        font-size: 0.85rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      @media (max-width: 768px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .card h2 {
+        color: #58a6ff;
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #21262d;
+        padding-bottom: 8px;
+      }
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px solid #21262d;
+      }
+      .stat:last-child {
+        border-bottom: none;
+      }
+      .stat-label {
+        color: #8b949e;
+      }
+      .stat-value {
+        font-weight: 600;
+      }
+      .positive {
+        color: #3fb950;
+      }
+      .negative {
+        color: #f85149;
+      }
+      .neutral {
+        color: #d29922;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+      th {
+        text-align: left;
+        color: #8b949e;
+        padding: 8px 6px;
+        border-bottom: 1px solid #30363d;
+        font-weight: 500;
+      }
+      td {
+        padding: 8px 6px;
+        border-bottom: 1px solid #21262d;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .badge-buy {
+        background: #0d3320;
+        color: #3fb950;
+      }
+      .badge-sell {
+        background: #3d1116;
+        color: #f85149;
+      }
+      .badge-hold {
+        background: #2d2a0f;
+        color: #d29922;
+      }
+      .controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      button {
+        padding: 8px 20px;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        background: #21262d;
+        color: #c9d1d9;
+        font-family: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background: #30363d;
+      }
+      .btn-danger {
+        border-color: #f85149;
+        color: #f85149;
+      }
+      .btn-danger:hover {
+        background: #3d1116;
+      }
+      .btn-pause {
+        border-color: #d29922;
+        color: #d29922;
+      }
+      .btn-pause:hover {
+        background: #2d2a0f;
+      }
+      .status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+      }
+      .dot-active {
+        background: #3fb950;
+      }
+      .dot-paused {
+        background: #d29922;
+      }
+      .full-width {
+        grid-column: 1 / -1;
+      }
+      .trades-table {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .updated {
+        color: #484f58;
+        font-size: 0.75rem;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Crypto Volatility Bot</h1>
+    <p class="subtitle">Bollinger Band Mean Reversion + RSI | Paper Trading</p>
+
+    <div class="controls">
+      <button class="btn-pause" id="pauseBtn" onclick="togglePause()">Pause Bot</button>
+      <button class="btn-danger" id="liquidateBtn" onclick="liquidateAll()">Liquidate All</button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Account</h2>
+        <div id="account">
+          <div class="stat">
+            <span class="stat-label">Equity</span><span class="stat-value" id="equity">--</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Cash</span><span class="stat-value" id="cash">--</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Status</span><span class="stat-value" id="botStatus">--</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Positions</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Qty</th>
+              <th>Value</th>
+              <th>P&L</th>
+            </tr>
+          </thead>
+          <tbody id="positions">
+            <tr>
+              <td colspan="4">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card full-width">
+        <h2>Signals</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Price</th>
+              <th>RSI</th>
+              <th>BB Lower</th>
+              <th>BB Upper</th>
+              <th>Signal</th>
+            </tr>
+          </thead>
+          <tbody id="signals">
+            <tr>
+              <td colspan="6">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card full-width">
+        <h2>Recent Trades</h2>
+        <div class="trades-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Symbol</th>
+                <th>Side</th>
+                <th>Amount</th>
+                <th>Price</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody id="trades">
+              <tr>
+                <td colspan="6">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <p class="updated" id="lastUpdate"></p>
+
+    <script>
+      const fetchStatus = async () => {
+        try {
+          const res = await fetch('/api/status');
+          const data = await res.json();
+
+          document.getElementById('equity').textContent = '$' + Number(data.equity).toFixed(2);
+          document.getElementById('cash').textContent = '$' + Number(data.cash).toFixed(2);
+
+          const statusEl = document.getElementById('botStatus');
+          if (data.paused) {
+            statusEl.innerHTML = '<span class="status-dot dot-paused"></span>Paused';
+            document.getElementById('pauseBtn').textContent = 'Resume Bot';
+          } else {
+            statusEl.innerHTML = '<span class="status-dot dot-active"></span>Running';
+            document.getElementById('pauseBtn').textContent = 'Pause Bot';
+          }
+
+          const posBody = document.getElementById('positions');
+          if (data.positions.length === 0) {
+            posBody.innerHTML = '<tr><td colspan="4" style="color:#484f58">No positions</td></tr>';
+          } else {
+            posBody.innerHTML = data.positions
+              .map((p) => {
+                const pl = Number(p.unrealizedPl);
+                const plClass = pl >= 0 ? 'positive' : 'negative';
+                return `<tr>
+              <td>${p.symbol}</td>
+              <td>${Number(p.qty).toFixed(6)}</td>
+              <td>$${Number(p.marketValue).toFixed(2)}</td>
+              <td class="${plClass}">$${pl.toFixed(2)}</td>
+            </tr>`;
+              })
+              .join('');
+          }
+
+          const sigBody = document.getElementById('signals');
+          if (data.signals.length === 0) {
+            sigBody.innerHTML =
+              '<tr><td colspan="6" style="color:#484f58">Waiting for first tick...</td></tr>';
+          } else {
+            sigBody.innerHTML = data.signals
+              .map((s) => {
+                const badgeClass =
+                  s.action === 'buy'
+                    ? 'badge-buy'
+                    : s.action === 'sell'
+                      ? 'badge-sell'
+                      : 'badge-hold';
+                return `<tr>
+              <td>${s.symbol}</td>
+              <td>$${Number(s.price).toFixed(2)}</td>
+              <td class="${s.rsi < 30 ? 'positive' : s.rsi > 70 ? 'negative' : ''}">${s.rsi.toFixed(1)}</td>
+              <td>$${Number(s.bbLower).toFixed(2)}</td>
+              <td>$${Number(s.bbUpper).toFixed(2)}</td>
+              <td><span class="badge ${badgeClass}">${s.action}</span></td>
+            </tr>`;
+              })
+              .join('');
+          }
+
+          document.getElementById('lastUpdate').textContent =
+            'Last updated: ' + new Date().toLocaleTimeString();
+        } catch (err) {
+          console.error('Failed to fetch status', err);
+        }
+      };
+
+      const fetchTrades = async () => {
+        try {
+          const res = await fetch('/api/trades');
+          const data = await res.json();
+          const tbody = document.getElementById('trades');
+
+          if (data.trades.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="color:#484f58">No trades yet</td></tr>';
+          } else {
+            tbody.innerHTML = data.trades
+              .slice(-50)
+              .reverse()
+              .map((t) => {
+                const sideClass = t.side === 'buy' ? 'badge-buy' : 'badge-sell';
+                return `<tr>
+              <td>${new Date(t.timestamp).toLocaleString()}</td>
+              <td>${t.symbol}</td>
+              <td><span class="badge ${sideClass}">${t.side}</span></td>
+              <td>$${t.notional}</td>
+              <td>$${Number(t.price).toFixed(2)}</td>
+              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${t.reason}</td>
+            </tr>`;
+              })
+              .join('');
+          }
+        } catch (err) {
+          console.error('Failed to fetch trades', err);
+        }
+      };
+
+      const togglePause = async () => {
+        try {
+          const res = await fetch('/api/pause', { method: 'POST' });
+          const data = await res.json();
+          fetchStatus();
+        } catch (err) {
+          console.error('Failed to toggle pause', err);
+        }
+      };
+
+      const liquidateAll = async () => {
+        if (!confirm('Liquidate ALL positions? This cannot be undone.')) return;
+        try {
+          const res = await fetch('/api/liquidate', { method: 'POST' });
+          const data = await res.json();
+          alert(data.message || 'Liquidation submitted');
+          fetchStatus();
+        } catch (err) {
+          console.error('Failed to liquidate', err);
+        }
+      };
+
+      fetchStatus();
+      fetchTrades();
+      setInterval(() => {
+        fetchStatus();
+        fetchTrades();
+      }, 10000);
+    </script>
+  </body>
+</html>

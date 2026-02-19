@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: crypto-vol-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    buildCommand: ''
+    startCommand: ''
+    envVars:
+      - key: ALPACA_KEY_ID
+        sync: false
+      - key: ALPACA_SECRET_KEY
+        sync: false
+      - key: BOT_MODE
+        value: paper
+      - key: LOG_LEVEL
+        value: info
+    disk:
+      name: bot-data
+      mountPath: /data
+      sizeGB: 1
+    plan: starter
