@@ -15,37 +15,100 @@ type BinancePremiumIndex = {
   nextFundingTime: number;
 };
 
-export const fetchFundingRates = async (): Promise<FundingRateData[]> => {
-  const cached = cache.get(CACHE_KEY);
-  if (cached) return cached;
+type BybitTicker = {
+  symbol: string;
+  fundingRate: string;
+  markPrice: string;
+  nextFundingTime: string;
+};
 
+type BybitResponse = {
+  retCode: number;
+  result: {
+    list: BybitTicker[];
+  };
+};
+
+const fetchFromBinance = async (
+  symbols: string[],
+): Promise<FundingRateData[] | null> => {
   try {
-    const binanceSymbols = SYMBOLS.map((s) => toBinanceSymbol(s));
     const res = await fetch('https://fapi.binance.com/fapi/v1/premiumIndex');
     if (!res.ok) {
       logger.warn(`Binance funding API returned ${res.status}`);
-      return [];
+      return null;
     }
 
     const json = (await res.json()) as BinancePremiumIndex[];
-    const relevant = json.filter((item) => binanceSymbols.includes(item.symbol));
+    const relevant = json.filter((item) => symbols.includes(item.symbol));
 
-    const rates: FundingRateData[] = relevant.map((item) => ({
+    return relevant.map((item) => ({
       symbol: item.symbol,
       fundingRate: parseFloat(item.lastFundingRate),
       markPrice: parseFloat(item.markPrice),
       nextFundingTime: new Date(item.nextFundingTime).toISOString(),
     }));
-
-    cache.set(CACHE_KEY, rates);
-    logger.info(`Funding rates fetched for ${rates.length} symbols`);
-    return rates;
   } catch (err) {
-    logger.warn('Failed to fetch Binance funding rates', {
+    logger.warn('Binance funding fetch failed', {
       error: (err as Error).message,
     });
+    return null;
+  }
+};
+
+const fetchFromBybit = async (
+  symbols: string[],
+): Promise<FundingRateData[] | null> => {
+  try {
+    const res = await fetch(
+      'https://api.bybit.com/v5/market/tickers?category=linear',
+    );
+    if (!res.ok) {
+      logger.warn(`Bybit funding API returned ${res.status}`);
+      return null;
+    }
+
+    const json = (await res.json()) as BybitResponse;
+    if (json.retCode !== 0) {
+      logger.warn(`Bybit funding API error: retCode ${json.retCode}`);
+      return null;
+    }
+
+    const relevant = json.result.list.filter((item) =>
+      symbols.includes(item.symbol),
+    );
+
+    return relevant.map((item) => ({
+      symbol: item.symbol,
+      fundingRate: parseFloat(item.fundingRate),
+      markPrice: parseFloat(item.markPrice),
+      nextFundingTime: new Date(Number(item.nextFundingTime)).toISOString(),
+    }));
+  } catch (err) {
+    logger.warn('Bybit funding fetch failed', {
+      error: (err as Error).message,
+    });
+    return null;
+  }
+};
+
+export const fetchFundingRates = async (): Promise<FundingRateData[]> => {
+  const cached = cache.get(CACHE_KEY);
+  if (cached) return cached;
+
+  const symbols = SYMBOLS.map((s) => toBinanceSymbol(s));
+
+  const rates =
+    (await fetchFromBinance(symbols)) ?? (await fetchFromBybit(symbols));
+
+  if (!rates || rates.length === 0) {
+    logger.warn('All funding rate sources failed');
     return [];
   }
+
+  cache.set(CACHE_KEY, rates);
+  logger.info(`Funding rates fetched for ${rates.length} symbols`);
+  return rates;
 };
 
 export const getFundingRate = (
