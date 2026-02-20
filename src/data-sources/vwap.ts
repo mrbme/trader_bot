@@ -15,9 +15,7 @@ export const extractVwap = (symbol: Symbol, bars: Bar[]): VwapData | null => {
   };
 };
 
-export const extractAllVwaps = (
-  barsBySymbol: Record<string, Bar[]>,
-): Record<string, VwapData> => {
+export const extractAllVwaps = (barsBySymbol: Record<string, Bar[]>): Record<string, VwapData> => {
   const vwaps: Record<string, VwapData> = {};
 
   for (const [symbol, bars] of Object.entries(barsBySymbol)) {

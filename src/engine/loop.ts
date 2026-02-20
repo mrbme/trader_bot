@@ -55,15 +55,11 @@ export const runOnce = async (): Promise<void> => {
       fetchAllNews(),
     ]);
 
-    const fearGreed = enrichmentResults[0].status === 'fulfilled'
-      ? enrichmentResults[0].value
-      : null;
-    const fundingRates = enrichmentResults[1].status === 'fulfilled'
-      ? enrichmentResults[1].value
-      : [];
-    const allNews = enrichmentResults[2].status === 'fulfilled'
-      ? enrichmentResults[2].value
-      : {};
+    const fearGreed =
+      enrichmentResults[0].status === 'fulfilled' ? enrichmentResults[0].value : null;
+    const fundingRates =
+      enrichmentResults[1].status === 'fulfilled' ? enrichmentResults[1].value : [];
+    const allNews = enrichmentResults[2].status === 'fulfilled' ? enrichmentResults[2].value : {};
 
     // Classify market regime (Sonnet, cached 30min)
     let regime: RegimeClassification | null = null;
@@ -84,7 +80,11 @@ export const runOnce = async (): Promise<void> => {
 
         priceData[symbol] = { current: currentPrice, change24h };
         totalRsi += calculateRSI(closes, STRATEGY.rsiPeriod);
-        totalBandwidth += calculateBollingerBands(closes, STRATEGY.bbPeriod, STRATEGY.bbMultiplier).bandwidth;
+        totalBandwidth += calculateBollingerBands(
+          closes,
+          STRATEGY.bbPeriod,
+          STRATEGY.bbMultiplier,
+        ).bandwidth;
         symbolCount++;
       }
 
@@ -172,7 +172,11 @@ export const runOnce = async (): Promise<void> => {
         regimeConfidence: regime?.confidence ?? null,
       });
 
-      if (pos && pos.qty > 0 && checkTrailingStop(symbol, currentPrice, modifiers.trailingStopPct)) {
+      if (
+        pos &&
+        pos.qty > 0 &&
+        checkTrailingStop(symbol, currentPrice, modifiers.trailingStopPct)
+      ) {
         await executeTrailingStop(symbol, pos);
         continue;
       }

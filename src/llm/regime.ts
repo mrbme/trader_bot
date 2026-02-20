@@ -42,6 +42,8 @@ export const classifyRegime = async (
   };
 
   cache.set(CACHE_KEY, classification);
-  logger.info(`Regime: ${classification.regime} (confidence: ${(classification.confidence * 100).toFixed(0)}%)`);
+  logger.info(
+    `Regime: ${classification.regime} (confidence: ${(classification.confidence * 100).toFixed(0)}%)`,
+  );
   return classification;
 };

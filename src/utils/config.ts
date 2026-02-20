@@ -30,10 +30,10 @@ export const TARGET_WEIGHTS: Record<Symbol, number> = {
 
 export const STRATEGY = {
   bbPeriod: 20,
-  bbMultiplier: 2,
+  bbMultiplier: 1.3,
   rsiPeriod: 14,
-  rsiBuyThreshold: 30,
-  rsiSellThreshold: 70,
+  rsiBuyThreshold: 45,
+  rsiSellThreshold: 55,
   barsTimeframe: '1Hour',
   barsLimit: 50,
   loopIntervalMs: 5 * 60 * 1000,
@@ -41,10 +41,10 @@ export const STRATEGY = {
 } as const;
 
 export const RISK = {
-  maxPositionWeight: 0.4,
+  maxPositionWeight: 0.5,
   trailingStopPct: 0.05,
   minOrderNotional: 10,
-  cooldownMs: 15 * 60 * 1000,
+  cooldownMs: 5 * 60 * 1000,
   dailyLossLimitPct: 0.08,
   dailyLossPauseMs: 4 * 60 * 60 * 1000,
   rebalanceDriftPct: 0.08,
@@ -80,9 +80,9 @@ export const MODIFIERS = {
     volatileCompressionSizeAdjust: -0.1,
   },
   clamps: {
-    rsiBuy: { min: 15, max: 45 },
-    rsiSell: { min: 55, max: 85 },
-    bbMultiplier: { min: 1.2, max: 3.0 },
+    rsiBuy: { min: 20, max: 55 },
+    rsiSell: { min: 45, max: 80 },
+    bbMultiplier: { min: 1.0, max: 3.0 },
     positionSizeMultiplier: { min: 0.3, max: 1.5 },
     trailingStopPct: { min: 0.02, max: 0.12 },
   },

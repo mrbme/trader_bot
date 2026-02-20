@@ -10,9 +10,7 @@ type JournalResponse = {
   analysis: string;
 };
 
-export const generateTradeJournal = async (
-  input: JournalPromptInput,
-): Promise<void> => {
+export const generateTradeJournal = async (input: JournalPromptInput): Promise<void> => {
   if (!config.llmJournalEnabled) return;
 
   try {

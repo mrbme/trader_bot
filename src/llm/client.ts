@@ -21,8 +21,7 @@ const getClient = (): Anthropic | null => {
   return client;
 };
 
-export const isLlmAvailable = (): boolean =>
-  config.llmEnabled && !!config.anthropic.apiKey;
+export const isLlmAvailable = (): boolean => config.llmEnabled && !!config.anthropic.apiKey;
 
 export const llmComplete = async (
   tier: ModelTier,
@@ -67,7 +66,10 @@ export const llmCompleteJson = async <T>(
 
   try {
     // Strip markdown code fences if present
-    const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const cleaned = raw
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
     return JSON.parse(cleaned) as T;
   } catch (err) {
     logger.warn('Failed to parse LLM JSON response', {

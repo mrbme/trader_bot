@@ -1,9 +1,6 @@
 import { TtlCache } from '@/cache/ttl-cache.ts';
 import { logger } from '@/utils/logger.ts';
-import {
-  toBinanceSymbol,
-  toHyperliquidSymbol,
-} from '@/data-sources/symbol-map.ts';
+import { toBinanceSymbol, toHyperliquidSymbol } from '@/data-sources/symbol-map.ts';
 import { SYMBOLS } from '@/utils/config.ts';
 import type { Symbol } from '@/utils/config.ts';
 import type { FundingRateData } from '@/data-sources/types.ts';
@@ -32,9 +29,7 @@ type BybitResponse = {
   };
 };
 
-const fetchFromBinance = async (
-  symbols: string[],
-): Promise<FundingRateData[] | null> => {
+const fetchFromBinance = async (symbols: string[]): Promise<FundingRateData[] | null> => {
   try {
     const res = await fetch('https://fapi.binance.com/fapi/v1/premiumIndex');
     if (!res.ok) {
@@ -45,12 +40,14 @@ const fetchFromBinance = async (
     const json = (await res.json()) as BinancePremiumIndex[];
     const relevant = json.filter((item) => symbols.includes(item.symbol));
 
-    return relevant.map((item) => ({
+    const results = relevant.map((item) => ({
       symbol: item.symbol,
       fundingRate: parseFloat(item.lastFundingRate),
       markPrice: parseFloat(item.markPrice),
       nextFundingTime: new Date(item.nextFundingTime).toISOString(),
     }));
+
+    return results.length > 0 ? results : null;
   } catch (err) {
     logger.warn('Binance funding fetch failed', {
       error: (err as Error).message,
@@ -59,13 +56,9 @@ const fetchFromBinance = async (
   }
 };
 
-const fetchFromBybit = async (
-  symbols: string[],
-): Promise<FundingRateData[] | null> => {
+const fetchFromBybit = async (symbols: string[]): Promise<FundingRateData[] | null> => {
   try {
-    const res = await fetch(
-      'https://api.bybit.com/v5/market/tickers?category=linear',
-    );
+    const res = await fetch('https://api.bybit.com/v5/market/tickers?category=linear');
     if (!res.ok) {
       logger.warn(`Bybit funding API returned ${res.status}`);
       return null;
@@ -77,16 +70,16 @@ const fetchFromBybit = async (
       return null;
     }
 
-    const relevant = json.result.list.filter((item) =>
-      symbols.includes(item.symbol),
-    );
+    const relevant = json.result.list.filter((item) => symbols.includes(item.symbol));
 
-    return relevant.map((item) => ({
+    const results = relevant.map((item) => ({
       symbol: item.symbol,
       fundingRate: parseFloat(item.fundingRate),
       markPrice: parseFloat(item.markPrice),
       nextFundingTime: new Date(Number(item.nextFundingTime)).toISOString(),
     }));
+
+    return results.length > 0 ? results : null;
   } catch (err) {
     logger.warn('Bybit funding fetch failed', {
       error: (err as Error).message,
@@ -104,14 +97,9 @@ type HyperliquidAssetCtx = {
   markPx: string;
 };
 
-type HyperliquidResponse = [
-  { universe: HyperliquidAssetMeta[] },
-  HyperliquidAssetCtx[],
-];
+type HyperliquidResponse = [{ universe: HyperliquidAssetMeta[] }, HyperliquidAssetCtx[]];
 
-const fetchFromHyperliquid = async (
-  symbols: string[],
-): Promise<FundingRateData[] | null> => {
+const fetchFromHyperliquid = async (symbols: string[]): Promise<FundingRateData[] | null> => {
   try {
     const res = await fetch('https://api.hyperliquid.xyz/info', {
       method: 'POST',
@@ -177,10 +165,7 @@ export const fetchFundingRates = async (): Promise<FundingRateData[]> => {
   return rates;
 };
 
-export const getFundingRate = (
-  rates: FundingRateData[],
-  symbol: Symbol,
-): number | null => {
+export const getFundingRate = (rates: FundingRateData[], symbol: Symbol): number | null => {
   const binanceSymbol = toBinanceSymbol(symbol);
   const rate = rates.find((r) => r.symbol === binanceSymbol);
   return rate?.fundingRate ?? null;

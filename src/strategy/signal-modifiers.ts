@@ -83,7 +83,11 @@ export const calculateModifiers = (input: ModifierInput): SignalModifiers => {
     bbMultiplier: clamp(bbMultiplier, c.bbMultiplier.min, c.bbMultiplier.max),
     rsiBuyThreshold: clamp(rsiBuyThreshold, c.rsiBuy.min, c.rsiBuy.max),
     rsiSellThreshold: clamp(rsiSellThreshold, c.rsiSell.min, c.rsiSell.max),
-    positionSizeMultiplier: clamp(positionSizeMultiplier, c.positionSizeMultiplier.min, c.positionSizeMultiplier.max),
+    positionSizeMultiplier: clamp(
+      positionSizeMultiplier,
+      c.positionSizeMultiplier.min,
+      c.positionSizeMultiplier.max,
+    ),
     trailingStopPct: clamp(trailingStopPct, c.trailingStopPct.min, c.trailingStopPct.max),
   };
 };

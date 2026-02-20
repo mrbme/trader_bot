@@ -6,7 +6,10 @@
     <title>Crypto Vol Bot</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style type="text/tailwindcss">
       @theme {
@@ -33,107 +36,209 @@
       }
     </style>
   </head>
-  <body class="bg-gh-bg text-gh-text p-5 max-w-[1200px] mx-auto" style="font-family: 'Press Start 2P', cursive;">
+  <body
+    class="bg-gh-bg text-gh-text p-5 max-w-[1200px] mx-auto"
+    style="font-family: 'Press Start 2P', cursive"
+  >
     <h1 class="text-gh-blue mb-2 text-[1.4rem] font-bold">Crypto Volatility Bot</h1>
     <p class="text-gh-muted mb-6 text-sm">Bollinger Band Mean Reversion + RSI | Paper Trading</p>
 
     <div class="flex gap-3 mb-4">
-      <button class="px-5 py-2 border border-gh-yellow text-gh-yellow rounded-md bg-gh-btn hover:bg-[#2d2a0f] text-sm font-mono cursor-pointer transition-colors" id="pauseBtn" onclick="togglePause()">Pause Bot</button>
-      <button class="px-5 py-2 border border-gh-red text-gh-red rounded-md bg-gh-btn hover:bg-[#3d1116] text-sm font-mono cursor-pointer transition-colors" id="liquidateBtn" onclick="liquidateAll()">Liquidate All</button>
-      <button class="px-5 py-2 border border-gh-border rounded-md bg-gh-btn hover:bg-gh-btn-hover text-sm font-mono cursor-pointer transition-colors ml-auto" onclick="logout()">Logout</button>
+      <button
+        class="px-5 py-2 border border-gh-yellow text-gh-yellow rounded-md bg-gh-btn hover:bg-[#2d2a0f] text-sm font-mono cursor-pointer transition-colors"
+        id="pauseBtn"
+        onclick="togglePause()"
+      >
+        Pause Bot
+      </button>
+      <button
+        class="px-5 py-2 border border-gh-red text-gh-red rounded-md bg-gh-btn hover:bg-[#3d1116] text-sm font-mono cursor-pointer transition-colors"
+        id="liquidateBtn"
+        onclick="liquidateAll()"
+      >
+        Liquidate All
+      </button>
+      <button
+        class="px-5 py-2 border border-gh-border rounded-md bg-gh-btn hover:bg-gh-btn-hover text-sm font-mono cursor-pointer transition-colors ml-auto"
+        onclick="logout()"
+      >
+        Logout
+      </button>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
       <!-- Account -->
       <div class="bg-gh-card border border-gh-border rounded-lg p-4">
-        <h2 class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle">Account</h2>
+        <h2
+          class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle"
+        >
+          Account
+        </h2>
         <div id="account">
           <div class="flex justify-between py-1.5 border-b border-gh-border-subtle">
-            <span class="text-gh-muted">Equity</span><span class="font-semibold" id="equity">--</span>
+            <span class="text-gh-muted">Equity</span
+            ><span class="font-semibold" id="equity">--</span>
           </div>
           <div class="flex justify-between py-1.5 border-b border-gh-border-subtle">
             <span class="text-gh-muted">Cash</span><span class="font-semibold" id="cash">--</span>
           </div>
           <div class="flex justify-between py-1.5">
-            <span class="text-gh-muted">Status</span><span class="font-semibold" id="botStatus">--</span>
+            <span class="text-gh-muted">Status</span
+            ><span class="font-semibold" id="botStatus">--</span>
           </div>
         </div>
       </div>
 
       <!-- Positions -->
       <div class="bg-gh-card border border-gh-border rounded-lg p-4">
-        <h2 class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle">Positions</h2>
+        <h2
+          class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle"
+        >
+          Positions
+        </h2>
         <table class="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Symbol</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Qty</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Value</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">P&L</th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                Symbol
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                Qty
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                Value
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                P&L
+              </th>
             </tr>
           </thead>
           <tbody id="positions">
-            <tr><td colspan="4" class="py-2 px-1.5">Loading...</td></tr>
+            <tr>
+              <td colspan="4" class="py-2 px-1.5">Loading...</td>
+            </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Market Regime -->
       <div class="bg-gh-card border border-gh-border rounded-lg p-4">
-        <h2 class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle">Market Regime</h2>
+        <h2
+          class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle"
+        >
+          Market Regime
+        </h2>
         <div id="regime"><span class="text-gh-dimmed italic">Loading...</span></div>
       </div>
 
       <!-- Fear & Greed -->
       <div class="bg-gh-card border border-gh-border rounded-lg p-4">
-        <h2 class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle">Fear &amp; Greed Index</h2>
+        <h2
+          class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle"
+        >
+          Fear &amp; Greed Index
+        </h2>
         <div id="fearGreed"><span class="text-gh-dimmed italic">Loading...</span></div>
       </div>
 
       <!-- Funding Rates -->
       <div class="bg-gh-card border border-gh-border rounded-lg p-4 col-span-full">
-        <h2 class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle">Funding Rates</h2>
+        <h2
+          class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle"
+        >
+          Funding Rates
+        </h2>
         <div id="fundingRates"><span class="text-gh-dimmed italic">Loading...</span></div>
       </div>
 
       <!-- Signals -->
       <div class="bg-gh-card border border-gh-border rounded-lg p-4 col-span-full">
-        <h2 class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle">Signals</h2>
+        <h2
+          class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle"
+        >
+          Signals
+        </h2>
         <table class="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Symbol</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Price</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">RSI</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">BB Lower</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">BB Upper</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Signal</th>
-              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Sentiment</th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                Symbol
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                Price
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                RSI
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                BB Lower
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                BB Upper
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                Signal
+              </th>
+              <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">
+                Sentiment
+              </th>
             </tr>
           </thead>
           <tbody id="signals">
-            <tr><td colspan="7" class="py-2 px-1.5">Loading...</td></tr>
+            <tr>
+              <td colspan="7" class="py-2 px-1.5">Loading...</td>
+            </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Recent Trades -->
       <div class="bg-gh-card border border-gh-border rounded-lg p-4 col-span-full">
-        <h2 class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle">Recent Trades</h2>
+        <h2
+          class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle"
+        >
+          Recent Trades
+        </h2>
         <div class="max-h-[300px] overflow-y-auto">
           <table class="w-full border-collapse text-sm">
             <thead>
               <tr>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Time</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Symbol</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Side</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Amount</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Price</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Reason</th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Time
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Symbol
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Side
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Amount
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Price
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Reason
+                </th>
               </tr>
             </thead>
             <tbody id="trades">
-              <tr><td colspan="6" class="py-2 px-1.5">Loading...</td></tr>
+              <tr>
+                <td colspan="6" class="py-2 px-1.5">Loading...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -141,22 +246,56 @@
 
       <!-- Trade Journal -->
       <div class="bg-gh-card border border-gh-border rounded-lg p-4 col-span-full">
-        <h2 class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle">Trade Journal</h2>
+        <h2
+          class="text-gh-blue text-[0.95rem] font-bold mb-3 pb-2 border-b border-gh-border-subtle"
+        >
+          Trade Journal
+        </h2>
         <div class="max-h-[400px] overflow-y-auto">
           <table class="w-full border-collapse text-sm">
             <thead>
               <tr>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Time</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Symbol</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Side</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Price</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Notional</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Regime</th>
-                <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">LLM Analysis</th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Time
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Symbol
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Side
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Price
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Notional
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  Regime
+                </th>
+                <th
+                  class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium"
+                >
+                  LLM Analysis
+                </th>
               </tr>
             </thead>
             <tbody id="journal">
-              <tr><td colspan="7" class="py-2 px-1.5">Loading...</td></tr>
+              <tr>
+                <td colspan="7" class="py-2 px-1.5">Loading...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -179,10 +318,10 @@
 
       const regimeStyle = (regime) => {
         const map = {
-          'trending-up':          { bg: '#0d3320', color: '#3fb950' },
-          'trending-down':        { bg: '#3d1116', color: '#f85149' },
-          'range-bound':          { bg: '#2d2a0f', color: '#d29922' },
-          'volatile-expansion':   { bg: '#2a1a3e', color: '#bc8cff' },
+          'trending-up': { bg: '#0d3320', color: '#3fb950' },
+          'trending-down': { bg: '#3d1116', color: '#f85149' },
+          'range-bound': { bg: '#2d2a0f', color: '#d29922' },
+          'volatile-expansion': { bg: '#2a1a3e', color: '#bc8cff' },
           'volatile-compression': { bg: '#0d2a3d', color: '#79c0ff' },
         };
         return map[regime] || { bg: '#21262d', color: '#8b949e' };
@@ -195,11 +334,12 @@
       };
 
       const badgeHtml = (action) => {
-        const cls = action === 'buy'
-          ? 'bg-[#0d3320] text-[#3fb950]'
-          : action === 'sell'
-            ? 'bg-[#3d1116] text-[#f85149]'
-            : 'bg-[#2d2a0f] text-[#d29922]';
+        const cls =
+          action === 'buy'
+            ? 'bg-[#0d3320] text-[#3fb950]'
+            : action === 'sell'
+              ? 'bg-[#3d1116] text-[#f85149]'
+              : 'bg-[#2d2a0f] text-[#d29922]';
         return `<span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold uppercase ${cls}">${action}</span>`;
       };
 
@@ -225,7 +365,8 @@
         // Fear & Greed
         const fgEl = document.getElementById('fearGreed');
         if (!e || !e.fearGreed) {
-          fgEl.innerHTML = '<span class="text-gh-dimmed italic">No Fear &amp; Greed data available</span>';
+          fgEl.innerHTML =
+            '<span class="text-gh-dimmed italic">No Fear &amp; Greed data available</span>';
         } else {
           const fg = e.fearGreed;
           const color = fgColor(fg.value);
@@ -244,7 +385,8 @@
         // Market Regime
         const regEl = document.getElementById('regime');
         if (!e || !e.regime) {
-          regEl.innerHTML = '<span class="text-gh-dimmed italic">No regime classification available</span>';
+          regEl.innerHTML =
+            '<span class="text-gh-dimmed italic">No regime classification available</span>';
         } else {
           const rs = regimeStyle(e.regime);
           let html = `<span class="inline-block px-3 py-1 rounded-full text-sm font-semibold uppercase" style="background:${rs.bg};color:${rs.color}">${escHtml(e.regime)}</span>`;
@@ -269,20 +411,34 @@
         if (!e || !e.fundingRates || e.fundingRates.length === 0) {
           frEl.innerHTML = '<span class="text-gh-dimmed italic">No funding rate data</span>';
         } else {
-          const rows = e.fundingRates.map((f) => {
-            const rate = f.fundingRate;
-            const annualized = rate * 3 * 365 * 100;
-            const rateColor = Math.abs(rate) < 0.0001 ? 'text-gh-muted' : rate > 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
-            const annColor = Math.abs(annualized) < 0.5 ? 'text-gh-muted' : annualized > 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
-            const next = f.nextFundingTime ? new Date(f.nextFundingTime).toLocaleTimeString() : '--';
-            return `<tr>
+          const rows = e.fundingRates
+            .map((f) => {
+              const rate = f.fundingRate;
+              const annualized = rate * 3 * 365 * 100;
+              const rateColor =
+                Math.abs(rate) < 0.0001
+                  ? 'text-gh-muted'
+                  : rate > 0
+                    ? 'text-[#3fb950]'
+                    : 'text-[#f85149]';
+              const annColor =
+                Math.abs(annualized) < 0.5
+                  ? 'text-gh-muted'
+                  : annualized > 0
+                    ? 'text-[#3fb950]'
+                    : 'text-[#f85149]';
+              const next = f.nextFundingTime
+                ? new Date(f.nextFundingTime).toLocaleTimeString()
+                : '--';
+              return `<tr>
               <td class="py-2 px-1.5 border-b border-gh-border-subtle">${escHtml(f.symbol)}</td>
               <td class="py-2 px-1.5 border-b border-gh-border-subtle ${rateColor}">${(rate * 100).toFixed(4)}%</td>
               <td class="py-2 px-1.5 border-b border-gh-border-subtle ${annColor}">${annualized.toFixed(2)}%</td>
               <td class="py-2 px-1.5 border-b border-gh-border-subtle">$${Number(f.markPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               <td class="py-2 px-1.5 border-b border-gh-border-subtle">${next}</td>
             </tr>`;
-          }).join('');
+            })
+            .join('');
           frEl.innerHTML = `<table class="w-full border-collapse text-sm">
             <thead><tr>
               <th class="text-left text-gh-muted py-2 px-1.5 border-b border-gh-border font-medium">Symbol</th>
@@ -315,20 +471,29 @@
           return;
         }
 
-        tbody.innerHTML = entries.slice().reverse().map((e, i) => {
-          const sideClass = e.side === 'buy' ? 'bg-[#0d3320] text-[#3fb950]' : 'bg-[#3d1116] text-[#f85149]';
-          const regBadge = e.regime
-            ? (() => { const rs = regimeStyle(e.regime); return `<span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold uppercase" style="background:${rs.bg};color:${rs.color}">${escHtml(e.regime)}</span>`; })()
-            : '<span class="text-gh-dimmed">--</span>';
+        tbody.innerHTML = entries
+          .slice()
+          .reverse()
+          .map((e, i) => {
+            const sideClass =
+              e.side === 'buy' ? 'bg-[#0d3320] text-[#3fb950]' : 'bg-[#3d1116] text-[#f85149]';
+            const regBadge = e.regime
+              ? (() => {
+                  const rs = regimeStyle(e.regime);
+                  return `<span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold uppercase" style="background:${rs.bg};color:${rs.color}">${escHtml(e.regime)}</span>`;
+                })()
+              : '<span class="text-gh-dimmed">--</span>';
 
-          const analysis = e.llmAnalysis || '';
-          const truncated = analysis.length > 120 ? escHtml(analysis.slice(0, 120)) + '...' : escHtml(analysis);
-          const hasMore = analysis.length > 120;
-          const analysisCell = analysis
-            ? `${truncated}${hasMore ? ` <button class="text-gh-blue text-xs bg-transparent border-none cursor-pointer font-mono hover:underline p-0" onclick="toggleJournalRow(${i})">more</button>` : ''}`
-            : '<span class="text-gh-dimmed italic">LLM disabled</span>';
+            const analysis = e.llmAnalysis || '';
+            const truncated =
+              analysis.length > 120 ? escHtml(analysis.slice(0, 120)) + '...' : escHtml(analysis);
+            const hasMore = analysis.length > 120;
+            const analysisCell = analysis
+              ? `${truncated}${hasMore ? ` <button class="text-gh-blue text-xs bg-transparent border-none cursor-pointer font-mono hover:underline p-0" onclick="toggleJournalRow(${i})">more</button>` : ''}`
+              : '<span class="text-gh-dimmed italic">LLM disabled</span>';
 
-          const detailHtml = analysis ? `
+            const detailHtml = analysis
+              ? `
             <tr id="journal-detail-${i}" class="hidden">
               <td colspan="7" class="p-3 bg-gh-bg text-sm leading-relaxed text-gh-muted border-b border-gh-border-subtle">
                 <strong class="text-gh-text">Analysis:</strong> ${escHtml(analysis)}<br/><br/>
@@ -336,9 +501,10 @@
                 ${e.sentiment != null ? `<strong class="text-gh-text">Sentiment:</strong> ${e.sentiment.toFixed(2)}<br/>` : ''}
                 ${e.fearGreed != null ? `<strong class="text-gh-text">Fear &amp; Greed:</strong> ${e.fearGreed}<br/>` : ''}
               </td>
-            </tr>` : '';
+            </tr>`
+              : '';
 
-          return `<tr>
+            return `<tr>
             <td class="py-2 px-1.5 border-b border-gh-border-subtle">${new Date(e.timestamp).toLocaleString()}</td>
             <td class="py-2 px-1.5 border-b border-gh-border-subtle">${escHtml(e.symbol)}</td>
             <td class="py-2 px-1.5 border-b border-gh-border-subtle"><span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold uppercase ${sideClass}">${e.side}</span></td>
@@ -347,7 +513,8 @@
             <td class="py-2 px-1.5 border-b border-gh-border-subtle">${regBadge}</td>
             <td class="py-2 px-1.5 border-b border-gh-border-subtle max-w-[250px]">${analysisCell}</td>
           </tr>${detailHtml}`;
-        }).join('');
+          })
+          .join('');
       };
 
       const toggleJournalRow = (idx) => {
@@ -366,38 +533,45 @@
 
           const statusEl = document.getElementById('botStatus');
           if (data.paused) {
-            statusEl.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-gh-yellow mr-1.5"></span>Paused';
+            statusEl.innerHTML =
+              '<span class="inline-block w-2 h-2 rounded-full bg-gh-yellow mr-1.5"></span>Paused';
             document.getElementById('pauseBtn').textContent = 'Resume Bot';
           } else {
-            statusEl.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-gh-green mr-1.5"></span>Running';
+            statusEl.innerHTML =
+              '<span class="inline-block w-2 h-2 rounded-full bg-gh-green mr-1.5"></span>Running';
             document.getElementById('pauseBtn').textContent = 'Pause Bot';
           }
 
           const posBody = document.getElementById('positions');
           if (data.positions.length === 0) {
-            posBody.innerHTML = '<tr><td colspan="4" class="py-2 px-1.5 text-gh-dimmed">No positions</td></tr>';
+            posBody.innerHTML =
+              '<tr><td colspan="4" class="py-2 px-1.5 text-gh-dimmed">No positions</td></tr>';
           } else {
-            posBody.innerHTML = data.positions.map((p) => {
-              const pl = Number(p.unrealizedPl);
-              const plClass = pl >= 0 ? 'text-gh-green' : 'text-gh-red';
-              return `<tr>
+            posBody.innerHTML = data.positions
+              .map((p) => {
+                const pl = Number(p.unrealizedPl);
+                const plClass = pl >= 0 ? 'text-gh-green' : 'text-gh-red';
+                return `<tr>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">${p.symbol}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">${Number(p.qty).toFixed(6)}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">$${Number(p.marketValue).toFixed(2)}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle ${plClass}">$${pl.toFixed(2)}</td>
               </tr>`;
-            }).join('');
+              })
+              .join('');
           }
 
           const sigBody = document.getElementById('signals');
           if (data.signals.length === 0) {
-            sigBody.innerHTML = '<tr><td colspan="7" class="py-2 px-1.5 text-gh-dimmed">Waiting for first tick...</td></tr>';
+            sigBody.innerHTML =
+              '<tr><td colspan="7" class="py-2 px-1.5 text-gh-dimmed">Waiting for first tick...</td></tr>';
           } else {
             const sentiments = enrichmentData?.sentiments || {};
-            sigBody.innerHTML = data.signals.map((s) => {
-              const rsiClass = s.rsi < 30 ? 'text-gh-green' : s.rsi > 70 ? 'text-gh-red' : '';
-              const sentVal = sentiments[s.symbol] ?? null;
-              return `<tr>
+            sigBody.innerHTML = data.signals
+              .map((s) => {
+                const rsiClass = s.rsi < 30 ? 'text-gh-green' : s.rsi > 70 ? 'text-gh-red' : '';
+                const sentVal = sentiments[s.symbol] ?? null;
+                return `<tr>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">${s.symbol}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">$${Number(s.price).toFixed(2)}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle ${rsiClass}">${s.rsi.toFixed(1)}</td>
@@ -406,10 +580,12 @@
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">${badgeHtml(s.action)}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">${sentimentDot(sentVal)}</td>
               </tr>`;
-            }).join('');
+              })
+              .join('');
           }
 
-          document.getElementById('lastUpdate').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+          document.getElementById('lastUpdate').textContent =
+            'Last updated: ' + new Date().toLocaleTimeString();
         } catch (err) {
           console.error('Failed to fetch status', err);
         }
@@ -423,11 +599,16 @@
           const tbody = document.getElementById('trades');
 
           if (data.trades.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="py-2 px-1.5 text-gh-dimmed">No trades yet</td></tr>';
+            tbody.innerHTML =
+              '<tr><td colspan="6" class="py-2 px-1.5 text-gh-dimmed">No trades yet</td></tr>';
           } else {
-            tbody.innerHTML = data.trades.slice(-50).reverse().map((t) => {
-              const sideClass = t.side === 'buy' ? 'bg-[#0d3320] text-[#3fb950]' : 'bg-[#3d1116] text-[#f85149]';
-              return `<tr>
+            tbody.innerHTML = data.trades
+              .slice(-50)
+              .reverse()
+              .map((t) => {
+                const sideClass =
+                  t.side === 'buy' ? 'bg-[#0d3320] text-[#3fb950]' : 'bg-[#3d1116] text-[#f85149]';
+                return `<tr>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">${new Date(t.timestamp).toLocaleString()}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">${t.symbol}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle"><span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold uppercase ${sideClass}">${t.side}</span></td>
@@ -435,7 +616,8 @@
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle">$${Number(t.price).toFixed(2)}</td>
                 <td class="py-2 px-1.5 border-b border-gh-border-subtle max-w-[200px] overflow-hidden text-ellipsis">${t.reason}</td>
               </tr>`;
-            }).join('');
+              })
+              .join('');
           }
         } catch (err) {
           console.error('Failed to fetch trades', err);

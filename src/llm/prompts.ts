@@ -44,7 +44,10 @@ export type RegimePromptInput = {
 
 export const buildRegimePrompt = (input: RegimePromptInput): string => {
   const priceLines = Object.entries(input.prices)
-    .map(([sym, p]) => `  ${sym}: $${p.current.toFixed(2)} (${p.change24h >= 0 ? '+' : ''}${p.change24h.toFixed(2)}%)`)
+    .map(
+      ([sym, p]) =>
+        `  ${sym}: $${p.current.toFixed(2)} (${p.change24h >= 0 ? '+' : ''}${p.change24h.toFixed(2)}%)`,
+    )
     .join('\n');
 
   const fundingLines = Object.entries(input.fundingRates)
