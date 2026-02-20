@@ -26,3 +26,14 @@ export const fromAlpacaSymbol = (alpacaSymbol: string): Symbol | null => {
   const entry = Object.entries(ALPACA_MAP).find(([, v]) => v === alpacaSymbol);
   return entry ? (entry[0] as Symbol) : null;
 };
+
+const HYPERLIQUID_MAP: Record<Symbol, string> = {
+  'BTC/USD': 'BTC',
+  'ETH/USD': 'ETH',
+  'SOL/USD': 'SOL',
+  'DOGE/USD': 'DOGE',
+  'LINK/USD': 'LINK',
+};
+
+export const toHyperliquidSymbol = (symbol: Symbol): string =>
+  HYPERLIQUID_MAP[symbol] ?? symbol.split('/')[0];
