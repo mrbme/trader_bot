@@ -116,6 +116,18 @@ export const createServer = () => {
       return { paused: nowPaused };
     })
 
+    .get('/api/enrichment', () => {
+      const state = getState();
+      return { enrichment: state.lastEnrichment };
+    })
+
+    .get('/api/journal', ({ query }) => {
+      const state = getState();
+      const limit = parseInt((query as Record<string, string>).limit ?? '50', 10);
+      const clamped = Math.max(1, Math.min(200, limit));
+      return { entries: state.journalEntries.slice(-clamped) };
+    })
+
     .post('/api/liquidate', async () => {
       try {
         await alpacaLiquidateAll();

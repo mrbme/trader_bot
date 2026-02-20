@@ -26,10 +26,12 @@ export const getCryptoBars = async (symbols: readonly Symbol[]): Promise<Record<
   const results: Record<string, Bar[]> = {};
 
   const fetches = symbols.map(async (symbol) => {
+    const start = new Date(Date.now() - STRATEGY.barsLimit * 60 * 60 * 1000).toISOString();
     const params = new URLSearchParams({
       symbols: symbol,
-      timeframe: STRATEGY.barsTimeframe === '1Hour' ? '1Hour' : STRATEGY.barsTimeframe,
+      timeframe: '1H',
       limit: String(STRATEGY.barsLimit),
+      start,
     });
 
     const data = await alpacaFetch<BarsResponse>(

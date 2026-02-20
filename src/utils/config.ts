@@ -10,6 +10,11 @@ export const config = {
   port: parseInt(Bun.env.PORT ?? '3000', 10),
   dataDir: Bun.env.DATA_DIR ?? './data',
   dashboardPassword: Bun.env.DASHBOARD_PASSWORD ?? '',
+  anthropic: {
+    apiKey: Bun.env.ANTHROPIC_API_KEY ?? '',
+  },
+  llmEnabled: Bun.env.LLM_ENABLED !== 'false',
+  llmJournalEnabled: Bun.env.LLM_JOURNAL_ENABLED !== 'false',
 } as const;
 
 export const SYMBOLS = ['BTC/USD', 'ETH/USD', 'SOL/USD', 'DOGE/USD', 'LINK/USD'] as const;
@@ -43,6 +48,44 @@ export const RISK = {
   dailyLossLimitPct: 0.08,
   dailyLossPauseMs: 4 * 60 * 60 * 1000,
   rebalanceDriftPct: 0.08,
+} as const;
+
+export const MODIFIERS = {
+  fearGreed: {
+    extremeFearThreshold: 25,
+    extremeGreedThreshold: 75,
+    rsiBuyAdjust: 5,
+    bbMultAdjustFear: -0.2,
+    rsiBuyAdjustGreed: -5,
+    bbMultAdjustGreed: 0.3,
+  },
+  funding: {
+    negativeThreshold: -0.0001,
+    positiveThreshold: 0.0001,
+    sizeBullishAdjust: 0.1,
+    sizeBearishAdjust: -0.1,
+  },
+  sentiment: {
+    negativeThreshold: -0.3,
+    positiveThreshold: 0.3,
+    bearishMultiplier: 0.3,
+    bullishMultiplier: 0.2,
+  },
+  regime: {
+    trendingUpStopAdjust: 0.02,
+    trendingDownStopAdjust: -0.01,
+    trendingDownSizeAdjust: -0.15,
+    volatileExpansionStopAdjust: -0.015,
+    volatileExpansionBbAdjust: 0.3,
+    volatileCompressionSizeAdjust: -0.1,
+  },
+  clamps: {
+    rsiBuy: { min: 15, max: 45 },
+    rsiSell: { min: 55, max: 85 },
+    bbMultiplier: { min: 1.2, max: 3.0 },
+    positionSizeMultiplier: { min: 0.3, max: 1.5 },
+    trailingStopPct: { min: 0.02, max: 0.12 },
+  },
 } as const;
 
 export default config;

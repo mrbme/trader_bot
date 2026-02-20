@@ -7,23 +7,32 @@ import type { SignalResult } from '@/strategy/signals.ts';
 import type { PositionInfo } from '@/strategy/portfolio.ts';
 import type { Symbol } from '@/utils/config.ts';
 import type { RebalanceAction } from '@/strategy/portfolio.ts';
+import type { ExecutionContext } from '@/llm/types.ts';
+import { generateTradeJournal } from '@/llm/journal.ts';
 
 export const executeSignal = async (
   signal: SignalResult,
   equity: number,
   position: PositionInfo | undefined,
+  context?: ExecutionContext,
 ): Promise<void> => {
   if (signal.signal === 'hold') return;
 
+  const sizeMult = context?.positionSizeMultiplier ?? 1.0;
+
   if (signal.signal === 'buy') {
     const currentValue = position?.marketValue ?? 0;
-    const notional = calculatePositionSize(signal.symbol, equity, currentValue);
+    let notional = calculatePositionSize(signal.symbol, equity, currentValue);
+    notional = notional * sizeMult;
     if (notional < RISK.minOrderNotional) {
       logger.debug(`Buy too small for ${signal.symbol}: $${notional.toFixed(2)}`);
       return;
     }
 
-    logger.info(`BUY ${signal.symbol} $${notional.toFixed(2)}`, { reason: signal.reason });
+    logger.info(`BUY ${signal.symbol} $${notional.toFixed(2)}`, {
+      reason: signal.reason,
+      sizeMult: sizeMult !== 1.0 ? sizeMult.toFixed(2) : undefined,
+    });
     const order = await placeOrder({
       symbol: signal.symbol,
       side: 'buy',
@@ -42,6 +51,22 @@ export const executeSignal = async (
     updateState((s) => {
       s.lastTradeTime[signal.symbol] = Date.now();
     });
+
+    // Fire-and-forget trade journal
+    generateTradeJournal({
+      symbol: signal.symbol,
+      side: 'buy',
+      price: signal.price,
+      notional,
+      reason: signal.reason,
+      rsi: signal.rsi,
+      bbPosition: `[${signal.bb.lower.toFixed(2)} - ${signal.bb.upper.toFixed(2)}]`,
+      fearGreed: context?.enrichment.fearGreed ?? null,
+      sentiment: context?.enrichment.sentiment ?? null,
+      regime: context?.enrichment.regime ?? null,
+      fundingRate: context?.enrichment.fundingRate ?? null,
+    }).catch(() => {});
+
     return;
   }
 
@@ -66,6 +91,21 @@ export const executeSignal = async (
     updateState((s) => {
       s.lastTradeTime[signal.symbol] = Date.now();
     });
+
+    // Fire-and-forget trade journal
+    generateTradeJournal({
+      symbol: signal.symbol,
+      side: 'sell',
+      price: signal.price,
+      notional: position.marketValue,
+      reason: signal.reason,
+      rsi: signal.rsi,
+      bbPosition: `[${signal.bb.lower.toFixed(2)} - ${signal.bb.upper.toFixed(2)}]`,
+      fearGreed: context?.enrichment.fearGreed ?? null,
+      sentiment: context?.enrichment.sentiment ?? null,
+      regime: context?.enrichment.regime ?? null,
+      fundingRate: context?.enrichment.fundingRate ?? null,
+    }).catch(() => {});
   }
 };
 

@@ -2,6 +2,7 @@ import { calculateBollingerBands, calculateRSI } from '@/strategy/indicators.ts'
 import { STRATEGY, TARGET_WEIGHTS, RISK } from '@/utils/config.ts';
 import type { Symbol } from '@/utils/config.ts';
 import type { BollingerBands } from '@/strategy/indicators.ts';
+import type { SignalModifiers } from '@/llm/types.ts';
 
 export type Signal = 'buy' | 'sell' | 'hold';
 
@@ -19,14 +20,19 @@ export const generateSignal = (
   closes: number[],
   currentPrice: number,
   currentWeight: number,
+  modifiers?: SignalModifiers,
 ): SignalResult => {
-  const bb = calculateBollingerBands(closes, STRATEGY.bbPeriod, STRATEGY.bbMultiplier);
+  const bbMult = modifiers?.bbMultiplier ?? STRATEGY.bbMultiplier;
+  const rsiBuy = modifiers?.rsiBuyThreshold ?? STRATEGY.rsiBuyThreshold;
+  const rsiSell = modifiers?.rsiSellThreshold ?? STRATEGY.rsiSellThreshold;
+
+  const bb = calculateBollingerBands(closes, STRATEGY.bbPeriod, bbMult);
   const rsi = calculateRSI(closes, STRATEGY.rsiPeriod);
 
   const targetWeight = TARGET_WEIGHTS[symbol];
 
   const isBelowLowerBB = currentPrice < bb.lower;
-  const isOversold = rsi < STRATEGY.rsiBuyThreshold;
+  const isOversold = rsi < rsiBuy;
   const isBelowTarget = currentWeight < targetWeight;
 
   if (isBelowLowerBB && isOversold && isBelowTarget) {
@@ -36,18 +42,18 @@ export const generateSignal = (
       price: currentPrice,
       rsi,
       bb,
-      reason: `Price ${currentPrice.toFixed(2)} < BB lower ${bb.lower.toFixed(2)}, RSI ${rsi.toFixed(1)} < ${STRATEGY.rsiBuyThreshold}`,
+      reason: `Price ${currentPrice.toFixed(2)} < BB lower ${bb.lower.toFixed(2)}, RSI ${rsi.toFixed(1)} < ${rsiBuy}`,
     };
   }
 
   const isAboveUpperBB = currentPrice > bb.upper;
-  const isOverbought = rsi > STRATEGY.rsiSellThreshold;
+  const isOverbought = rsi > rsiSell;
   const isOverMaxWeight = currentWeight > RISK.maxPositionWeight;
 
   if ((isAboveUpperBB && isOverbought) || isOverMaxWeight) {
     const reason = isOverMaxWeight
       ? `Position weight ${(currentWeight * 100).toFixed(1)}% > max ${RISK.maxPositionWeight * 100}%`
-      : `Price ${currentPrice.toFixed(2)} > BB upper ${bb.upper.toFixed(2)}, RSI ${rsi.toFixed(1)} > ${STRATEGY.rsiSellThreshold}`;
+      : `Price ${currentPrice.toFixed(2)} > BB upper ${bb.upper.toFixed(2)}, RSI ${rsi.toFixed(1)} > ${rsiSell}`;
 
     return { symbol, signal: 'sell', price: currentPrice, rsi, bb, reason };
   }

@@ -1,6 +1,8 @@
 import { config } from '@/utils/config.ts';
 import { logger } from '@/utils/logger.ts';
 import type { Symbol } from '@/utils/config.ts';
+import type { TradeJournalEntry } from '@/llm/types.ts';
+import type { EnrichmentContext } from '@/data-sources/types.ts';
 
 export type TradeEntry = {
   timestamp: string;
@@ -33,6 +35,8 @@ export type BotState = {
   lastRebalanceAt: number;
   paused: boolean;
   pausedUntil: number | null;
+  journalEntries: TradeJournalEntry[];
+  lastEnrichment: EnrichmentContext | null;
 };
 
 const STATE_FILE = `${config.dataDir}/bot-state.json`;
@@ -47,6 +51,8 @@ const defaultState = (): BotState => ({
   lastRebalanceAt: 0,
   paused: false,
   pausedUntil: null,
+  journalEntries: [],
+  lastEnrichment: null,
 });
 
 let state: BotState = defaultState();
@@ -92,4 +98,15 @@ export const addTrade = (trade: TradeEntry): void => {
 
 export const addSignals = (signals: SignalSnapshot[]): void => {
   state.signals = signals;
+};
+
+export const addJournalEntry = (entry: TradeJournalEntry): void => {
+  state.journalEntries.push(entry);
+  if (state.journalEntries.length > 200) {
+    state.journalEntries = state.journalEntries.slice(-200);
+  }
+};
+
+export const setEnrichment = (enrichment: EnrichmentContext): void => {
+  state.lastEnrichment = enrichment;
 };
