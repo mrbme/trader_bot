@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { getAccount, getPositions } from '@/alpaca/trading.ts';
 import { liquidateAll as alpacaLiquidateAll } from '@/alpaca/trading.ts';
-import { getState, updateState, saveState } from '@/state/store.ts';
+import { getState, updateState, saveState, calculateScalpMetrics } from '@/state/store.ts';
 import { logger } from '@/utils/logger.ts';
 import config from '@/utils/config.ts';
 
@@ -68,6 +68,7 @@ export const createServer = () => {
         const [account, positions] = await Promise.all([getAccount(), getPositions()]);
 
         const state = getState();
+        const metrics = calculateScalpMetrics();
 
         return {
           equity: parseFloat(account.equity),
@@ -80,6 +81,9 @@ export const createServer = () => {
           })),
           signals: state.signals,
           paused: state.paused || (state.pausedUntil !== null && Date.now() < state.pausedUntil),
+          scalpMetrics: metrics,
+          openScalps: state.openScalps.length,
+          dailyScalpCount: state.dailyScalpCount,
         };
       } catch (err) {
         logger.error('Status endpoint error', { error: (err as Error).message });
@@ -89,6 +93,9 @@ export const createServer = () => {
           positions: [],
           signals: [],
           paused: false,
+          scalpMetrics: null,
+          openScalps: 0,
+          dailyScalpCount: 0,
           error: (err as Error).message,
         };
       }
@@ -104,8 +111,18 @@ export const createServer = () => {
       return { signals: state.signals };
     })
 
-    .post('/api/pause', async () => {
+    .get('/api/scalps', () => {
       const state = getState();
+      const metrics = calculateScalpMetrics();
+      return {
+        open: state.openScalps,
+        recentClosed: state.closedScalps.slice(-50),
+        metrics,
+        dailyCount: state.dailyScalpCount,
+      };
+    })
+
+    .post('/api/pause', async () => {
       updateState((s) => {
         s.paused = !s.paused;
         if (!s.paused) s.pausedUntil = null;

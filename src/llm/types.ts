@@ -36,11 +36,9 @@ export type TradeJournalEntry = {
 };
 
 export type SignalModifiers = {
-  bbMultiplier: number;
-  rsiBuyThreshold: number;
-  rsiSellThreshold: number;
   positionSizeMultiplier: number;
-  trailingStopPct: number;
+  takeProfitPct: number;
+  stopLossPct: number;
 };
 
 export type ExecutionContext = {

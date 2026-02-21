@@ -1,171 +1,149 @@
 import { placeOrder } from '@/alpaca/trading.ts';
-import { RISK } from '@/utils/config.ts';
+import { SCALP } from '@/utils/config.ts';
 import { logger } from '@/utils/logger.ts';
-import { addTrade, updateState } from '@/state/store.ts';
-import { calculatePositionSize } from '@/strategy/portfolio.ts';
-import type { SignalResult } from '@/strategy/signals.ts';
-import type { PositionInfo } from '@/strategy/portfolio.ts';
-import type { Symbol } from '@/utils/config.ts';
-import type { RebalanceAction } from '@/strategy/portfolio.ts';
-import type { ExecutionContext } from '@/llm/types.ts';
+import {
+  addTrade,
+  updateState,
+  addOpenScalp,
+  closeScalp,
+  incrementDailyScalpCount,
+} from '@/state/store.ts';
+import { calculateScalpSize } from '@/strategy/portfolio.ts';
 import { generateTradeJournal } from '@/llm/journal.ts';
+import type { ScalpSignal, ScalpPosition, ScalpExitReason } from '@/strategy/scalp-types.ts';
+import type { SignalModifiers, ExecutionContext } from '@/llm/types.ts';
 
-export const executeSignal = async (
-  signal: SignalResult,
+export const executeScalpEntry = async (
+  signal: ScalpSignal,
   equity: number,
-  position: PositionInfo | undefined,
+  modifiers: SignalModifiers,
   context?: ExecutionContext,
-): Promise<void> => {
-  if (signal.signal === 'hold') return;
-
-  const sizeMult = context?.positionSizeMultiplier ?? 1.0;
-
-  if (signal.signal === 'buy') {
-    const currentValue = position?.marketValue ?? 0;
-    let notional = calculatePositionSize(signal.symbol, equity, currentValue);
-    notional = notional * sizeMult;
-    if (notional < RISK.minOrderNotional) {
-      logger.debug(`Buy too small for ${signal.symbol}: $${notional.toFixed(2)}`);
-      return;
-    }
-
-    logger.info(`BUY ${signal.symbol} $${notional.toFixed(2)}`, {
-      reason: signal.reason,
-      sizeMult: sizeMult !== 1.0 ? sizeMult.toFixed(2) : undefined,
-    });
-    const order = await placeOrder({
-      symbol: signal.symbol,
-      side: 'buy',
-      notional: notional.toFixed(2),
-    });
-
-    addTrade({
-      timestamp: new Date().toISOString(),
-      symbol: signal.symbol,
-      side: 'buy',
-      qty: order.filled_qty ?? '0',
-      notional: notional.toFixed(2),
-      price: order.filled_avg_price ?? signal.price.toString(),
-      reason: signal.reason,
-    });
-    updateState((s) => {
-      s.lastTradeTime[signal.symbol] = Date.now();
-    });
-
-    // Fire-and-forget trade journal
-    generateTradeJournal({
-      symbol: signal.symbol,
-      side: 'buy',
-      price: signal.price,
-      notional,
-      reason: signal.reason,
-      rsi: signal.rsi,
-      bbPosition: `[${signal.bb.lower.toFixed(2)} - ${signal.bb.upper.toFixed(2)}]`,
-      fearGreed: context?.enrichment.fearGreed ?? null,
-      sentiment: context?.enrichment.sentiment ?? null,
-      regime: context?.enrichment.regime ?? null,
-      fundingRate: context?.enrichment.fundingRate ?? null,
-    }).catch(() => {});
-
-    return;
+): Promise<ScalpPosition | null> => {
+  const notional = calculateScalpSize(equity, signal.score, modifiers.positionSizeMultiplier);
+  if (notional <= 0) {
+    logger.debug(`Scalp too small for ${signal.symbol}: $${notional.toFixed(2)}`);
+    return null;
   }
 
-  if (signal.signal === 'sell' && position && position.qty > 0) {
-    const sellQty = position.qty;
-    logger.info(`SELL ${signal.symbol} qty ${sellQty}`, { reason: signal.reason });
-    const order = await placeOrder({
-      symbol: signal.symbol,
-      side: 'sell',
-      qty: sellQty.toString(),
-    });
+  const entryPrice = signal.price;
+  const takeProfitPrice = entryPrice * (1 + modifiers.takeProfitPct);
+  const stopLossPrice = entryPrice * (1 - modifiers.stopLossPct);
 
-    addTrade({
-      timestamp: new Date().toISOString(),
-      symbol: signal.symbol,
-      side: 'sell',
-      qty: order.filled_qty ?? sellQty.toString(),
-      notional: position.marketValue.toFixed(2),
-      price: order.filled_avg_price ?? signal.price.toString(),
-      reason: signal.reason,
-    });
-    updateState((s) => {
-      s.lastTradeTime[signal.symbol] = Date.now();
-    });
-
-    // Fire-and-forget trade journal
-    generateTradeJournal({
-      symbol: signal.symbol,
-      side: 'sell',
-      price: signal.price,
-      notional: position.marketValue,
-      reason: signal.reason,
-      rsi: signal.rsi,
-      bbPosition: `[${signal.bb.lower.toFixed(2)} - ${signal.bb.upper.toFixed(2)}]`,
-      fearGreed: context?.enrichment.fearGreed ?? null,
-      sentiment: context?.enrichment.sentiment ?? null,
-      regime: context?.enrichment.regime ?? null,
-      fundingRate: context?.enrichment.fundingRate ?? null,
-    }).catch(() => {});
-  }
-};
-
-export const executeTrailingStop = async (
-  symbol: Symbol,
-  position: PositionInfo,
-): Promise<void> => {
-  logger.warn(`TRAILING STOP triggered for ${symbol}`, {
-    qty: position.qty,
-    price: position.currentPrice,
-  });
+  logger.info(
+    `SCALP ENTRY ${signal.symbol} $${notional.toFixed(2)} @ $${entryPrice.toFixed(2)} | score=${signal.score.toFixed(3)} | TP=$${takeProfitPrice.toFixed(2)} SL=$${stopLossPrice.toFixed(2)}`,
+  );
 
   const order = await placeOrder({
-    symbol,
-    side: 'sell',
-    qty: position.qty.toString(),
+    symbol: signal.symbol,
+    side: 'buy',
+    notional: notional.toFixed(2),
   });
+
+  const filledPrice = order.filled_avg_price ? parseFloat(order.filled_avg_price) : entryPrice;
+  const filledQty = order.filled_qty ? parseFloat(order.filled_qty) : notional / entryPrice;
+  const now = Date.now();
+
+  const scalp: ScalpPosition = {
+    id: `scalp_${now}_${Math.random().toString(36).substring(2, 8)}`,
+    symbol: signal.symbol,
+    direction: 'long',
+    entryPrice: filledPrice,
+    qty: filledQty,
+    notional,
+    takeProfitPrice: filledPrice * (1 + modifiers.takeProfitPct),
+    stopLossPrice: filledPrice * (1 - modifiers.stopLossPct),
+    maxHoldUntil: now + SCALP.maxHoldMs,
+    entryScore: signal.score,
+    entryTime: now,
+  };
+
+  addOpenScalp(scalp);
+  incrementDailyScalpCount();
 
   addTrade({
     timestamp: new Date().toISOString(),
-    symbol,
-    side: 'sell',
-    qty: order.filled_qty ?? position.qty.toString(),
-    notional: position.marketValue.toFixed(2),
-    price: order.filled_avg_price ?? position.currentPrice.toString(),
-    reason: 'Trailing stop triggered',
+    symbol: signal.symbol,
+    side: 'buy',
+    qty: order.filled_qty ?? filledQty.toString(),
+    notional: notional.toFixed(2),
+    price: order.filled_avg_price ?? entryPrice.toString(),
+    reason: `Scalp entry | score=${signal.score.toFixed(3)} | spread=$${signal.spread.toFixed(4)}`,
   });
 
   updateState((s) => {
-    s.lastTradeTime[symbol] = Date.now();
-    delete s.highWaterMarks[symbol];
+    s.lastTradeTime[signal.symbol] = now;
   });
+
+  // Fire-and-forget trade journal
+  generateTradeJournal({
+    symbol: signal.symbol,
+    side: 'buy',
+    price: filledPrice,
+    notional,
+    reason: `Scalp entry | score=${signal.score.toFixed(3)}`,
+    rsi: 0,
+    bbPosition: 'N/A (scalp mode)',
+    fearGreed: context?.enrichment.fearGreed ?? null,
+    sentiment: context?.enrichment.sentiment ?? null,
+    regime: context?.enrichment.regime ?? null,
+    fundingRate: context?.enrichment.fundingRate ?? null,
+  }).catch(() => {});
+
+  return scalp;
 };
 
-export const executeRebalance = async (actions: RebalanceAction[]): Promise<void> => {
-  for (const action of actions) {
+export const executeScalpExit = async (
+  scalp: ScalpPosition,
+  exitPrice: number,
+  exitReason: ScalpExitReason,
+  context?: ExecutionContext,
+): Promise<void> => {
+  logger.info(
+    `SCALP EXIT ${scalp.symbol} qty=${scalp.qty.toFixed(6)} @ $${exitPrice.toFixed(2)} | reason=${exitReason} | entry=$${scalp.entryPrice.toFixed(2)}`,
+  );
+
+  const order = await placeOrder({
+    symbol: scalp.symbol,
+    side: 'sell',
+    qty: scalp.qty.toString(),
+  });
+
+  const filledPrice = order.filled_avg_price ? parseFloat(order.filled_avg_price) : exitPrice;
+  const closed = closeScalp(scalp.id, filledPrice, exitReason);
+
+  if (closed) {
+    const pnlSign = closed.pnl >= 0 ? '+' : '';
     logger.info(
-      `REBALANCE ${action.side.toUpperCase()} ${action.symbol} $${action.notional.toFixed(2)}`,
+      `SCALP CLOSED ${scalp.symbol} | PnL: ${pnlSign}$${closed.pnl.toFixed(2)} (${(closed.pnlPct * 100).toFixed(3)}%) | duration=${(closed.durationMs / 1000).toFixed(0)}s | reason=${exitReason}`,
     );
-
-    try {
-      const order = await placeOrder({
-        symbol: action.symbol,
-        side: action.side,
-        notional: action.notional.toFixed(2),
-      });
-
-      addTrade({
-        timestamp: new Date().toISOString(),
-        symbol: action.symbol,
-        side: action.side,
-        qty: order.filled_qty ?? '0',
-        notional: action.notional.toFixed(2),
-        price: order.filled_avg_price ?? '0',
-        reason: 'Rebalance',
-      });
-    } catch (err) {
-      logger.error(`Rebalance order failed for ${action.symbol}`, {
-        error: (err as Error).message,
-      });
-    }
   }
+
+  addTrade({
+    timestamp: new Date().toISOString(),
+    symbol: scalp.symbol,
+    side: 'sell',
+    qty: order.filled_qty ?? scalp.qty.toString(),
+    notional: (filledPrice * scalp.qty).toFixed(2),
+    price: order.filled_avg_price ?? exitPrice.toString(),
+    reason: `Scalp exit: ${exitReason} | entry=$${scalp.entryPrice.toFixed(2)}`,
+  });
+
+  updateState((s) => {
+    s.lastTradeTime[scalp.symbol] = Date.now();
+  });
+
+  // Fire-and-forget trade journal
+  generateTradeJournal({
+    symbol: scalp.symbol,
+    side: 'sell',
+    price: filledPrice,
+    notional: filledPrice * scalp.qty,
+    reason: `Scalp exit: ${exitReason} | PnL: ${closed ? `$${closed.pnl.toFixed(2)}` : 'unknown'}`,
+    rsi: 0,
+    bbPosition: 'N/A (scalp mode)',
+    fearGreed: context?.enrichment.fearGreed ?? null,
+    sentiment: context?.enrichment.sentiment ?? null,
+    regime: context?.enrichment.regime ?? null,
+    fundingRate: context?.enrichment.fundingRate ?? null,
+  }).catch(() => {});
 };

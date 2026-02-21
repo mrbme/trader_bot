@@ -1,6 +1,7 @@
 import { alpacaFetch } from '@/alpaca/client.ts';
-import { STRATEGY } from '@/utils/config.ts';
+import { SCALP } from '@/utils/config.ts';
 import type { Symbol } from '@/utils/config.ts';
+import type { QuoteSnapshot } from '@/strategy/scalp-types.ts';
 
 export type Bar = {
   t: string;
@@ -26,11 +27,12 @@ export const getCryptoBars = async (symbols: readonly Symbol[]): Promise<Record<
   const results: Record<string, Bar[]> = {};
 
   const fetches = symbols.map(async (symbol) => {
-    const start = new Date(Date.now() - STRATEGY.barsLimit * 60 * 60 * 1000).toISOString();
+    // 1Min bars: look back barsLimit minutes
+    const start = new Date(Date.now() - SCALP.barsLimit * 60 * 1000).toISOString();
     const params = new URLSearchParams({
       symbols: symbol,
-      timeframe: '1H',
-      limit: String(STRATEGY.barsLimit),
+      timeframe: '1Min',
+      limit: String(SCALP.barsLimit),
       start,
     });
 
@@ -67,6 +69,31 @@ export const getLatestQuotes = async (symbols: readonly Symbol[]) => {
   );
 
   return data.quotes;
+};
+
+export const getQuoteSnapshots = async (
+  symbols: readonly Symbol[],
+): Promise<Record<string, QuoteSnapshot>> => {
+  const quotes = await getLatestQuotes(symbols);
+  const snapshots: Record<string, QuoteSnapshot> = {};
+
+  for (const [symbol, quote] of Object.entries(quotes)) {
+    const bid = quote.bp;
+    const ask = quote.ap;
+    const spread = ask - bid;
+    const midPrice = (bid + ask) / 2;
+
+    snapshots[symbol] = {
+      symbol: symbol as Symbol,
+      bid,
+      ask,
+      spread,
+      midPrice,
+      timestamp: quote.t,
+    };
+  }
+
+  return snapshots;
 };
 
 export const getCurrentPrices = async (

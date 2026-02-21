@@ -1,69 +1,101 @@
-import { calculateBollingerBands, calculateRSI } from '@/strategy/indicators.ts';
-import { STRATEGY, TARGET_WEIGHTS, RISK } from '@/utils/config.ts';
+import {
+  calculateEMACrossScore,
+  calculateRSI,
+  calculateRSIScore,
+  calculateROCScore,
+  calculateVolumeSpikeScore,
+  calculateVWAPDeviationScore,
+  calculateSpreadScore,
+} from '@/strategy/indicators.ts';
+import { SCALP } from '@/utils/config.ts';
 import type { Symbol } from '@/utils/config.ts';
-import type { BollingerBands } from '@/strategy/indicators.ts';
-import type { SignalModifiers } from '@/llm/types.ts';
+import type { Bar } from '@/alpaca/data.ts';
+import type { ScalpSignal, IndicatorScore, QuoteSnapshot } from '@/strategy/scalp-types.ts';
 
-export type Signal = 'buy' | 'sell' | 'hold';
-
-export type SignalResult = {
-  symbol: Symbol;
-  signal: Signal;
-  price: number;
-  rsi: number;
-  bb: BollingerBands;
-  reason: string;
-};
-
-export const generateSignal = (
+export const generateScalpSignal = (
   symbol: Symbol,
-  closes: number[],
-  currentPrice: number,
-  currentWeight: number,
-  modifiers?: SignalModifiers,
-): SignalResult => {
-  const bbMult = modifiers?.bbMultiplier ?? STRATEGY.bbMultiplier;
-  const rsiBuy = modifiers?.rsiBuyThreshold ?? STRATEGY.rsiBuyThreshold;
-  const rsiSell = modifiers?.rsiSellThreshold ?? STRATEGY.rsiSellThreshold;
+  bars: Bar[],
+  quote: QuoteSnapshot,
+  vwap: number | null,
+): ScalpSignal => {
+  const closes = bars.map((b) => b.c);
+  const volumes = bars.map((b) => b.v);
+  const { weights } = SCALP;
 
-  const bb = calculateBollingerBands(closes, STRATEGY.bbPeriod, bbMult);
-  const rsi = calculateRSI(closes, STRATEGY.rsiPeriod);
+  const indicators: IndicatorScore[] = [];
 
-  const targetWeight = TARGET_WEIGHTS[symbol];
+  // 1. EMA 8/21 crossover
+  const emaCrossRaw = calculateEMACrossScore(closes, SCALP.emaFast, SCALP.emaSlow);
+  indicators.push({
+    name: 'ema-cross',
+    raw: emaCrossRaw,
+    weight: weights.emaCross,
+    weighted: emaCrossRaw * weights.emaCross,
+  });
 
-  const isBelowLowerBB = currentPrice < bb.lower;
-  const isOversold = rsi < rsiBuy;
-  const isBelowTarget = currentWeight < targetWeight;
+  // 2. RSI (7-period)
+  const rsi = calculateRSI(closes, SCALP.rsiPeriod);
+  const rsiRaw = calculateRSIScore(rsi);
+  indicators.push({
+    name: 'rsi',
+    raw: rsiRaw,
+    weight: weights.rsi,
+    weighted: rsiRaw * weights.rsi,
+  });
 
-  if (isBelowLowerBB && isOversold && isBelowTarget) {
-    return {
-      symbol,
-      signal: 'buy',
-      price: currentPrice,
-      rsi,
-      bb,
-      reason: `Price ${currentPrice.toFixed(2)} < BB lower ${bb.lower.toFixed(2)}, RSI ${rsi.toFixed(1)} < ${rsiBuy}`,
-    };
-  }
+  // 3. Rate of Change (5-bar)
+  const rocRaw = calculateROCScore(closes, SCALP.rocPeriod);
+  indicators.push({
+    name: 'roc',
+    raw: rocRaw,
+    weight: weights.roc,
+    weighted: rocRaw * weights.roc,
+  });
 
-  const isAboveUpperBB = currentPrice > bb.upper;
-  const isOverbought = rsi > rsiSell;
-  const isOverMaxWeight = currentWeight > RISK.maxPositionWeight;
+  // 4. Volume spike
+  const volRaw = calculateVolumeSpikeScore(
+    volumes,
+    closes,
+    SCALP.volumeAvgPeriod,
+    SCALP.volumeSpikeMultiplier,
+  );
+  indicators.push({
+    name: 'volume-spike',
+    raw: volRaw,
+    weight: weights.volumeSpike,
+    weighted: volRaw * weights.volumeSpike,
+  });
 
-  if ((isAboveUpperBB && isOverbought) || isOverMaxWeight) {
-    const reason = isOverMaxWeight
-      ? `Position weight ${(currentWeight * 100).toFixed(1)}% > max ${RISK.maxPositionWeight * 100}%`
-      : `Price ${currentPrice.toFixed(2)} > BB upper ${bb.upper.toFixed(2)}, RSI ${rsi.toFixed(1)} > ${rsiSell}`;
+  // 5. VWAP deviation
+  const vwapRaw = calculateVWAPDeviationScore(quote.midPrice, vwap);
+  indicators.push({
+    name: 'vwap-deviation',
+    raw: vwapRaw,
+    weight: weights.vwapDeviation,
+    weighted: vwapRaw * weights.vwapDeviation,
+  });
 
-    return { symbol, signal: 'sell', price: currentPrice, rsi, bb, reason };
-  }
+  // 6. Spread width
+  const spreadRaw = calculateSpreadScore(quote.spread, quote.midPrice);
+  indicators.push({
+    name: 'spread',
+    raw: spreadRaw,
+    weight: weights.spread,
+    weighted: spreadRaw * weights.spread,
+  });
+
+  const score = indicators.reduce((sum, ind) => sum + ind.weighted, 0);
+
+  let direction: ScalpSignal['direction'] = 'none';
+  if (score >= SCALP.entryThreshold) direction = 'long';
 
   return {
     symbol,
-    signal: 'hold',
-    price: currentPrice,
-    rsi,
-    bb,
-    reason: 'No signal conditions met',
+    direction,
+    score,
+    indicators,
+    price: quote.midPrice,
+    spread: quote.spread,
+    timestamp: new Date().toISOString(),
   };
 };

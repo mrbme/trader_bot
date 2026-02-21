@@ -1,4 +1,4 @@
-import { STRATEGY, RISK, MODIFIERS } from '@/utils/config.ts';
+import { SCALP, MODIFIERS } from '@/utils/config.ts';
 import type { SignalModifiers, MarketRegime } from '@/llm/types.ts';
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -12,12 +12,10 @@ export type ModifierInput = {
   regimeConfidence: number | null;
 };
 
-export const calculateModifiers = (input: ModifierInput): SignalModifiers => {
-  let bbMultiplier = STRATEGY.bbMultiplier;
-  let rsiBuyThreshold = STRATEGY.rsiBuyThreshold;
-  let rsiSellThreshold = STRATEGY.rsiSellThreshold;
+export const calculateScalpModifiers = (input: ModifierInput): SignalModifiers => {
   let positionSizeMultiplier = 1.0;
-  let trailingStopPct = RISK.trailingStopPct;
+  let takeProfitPct = SCALP.takeProfitPct;
+  let stopLossPct = SCALP.stopLossPct;
 
   const { fearGreed, fundingRate, sentiment, regime, regimeConfidence } = input;
   const fg = MODIFIERS.fearGreed;
@@ -28,11 +26,11 @@ export const calculateModifiers = (input: ModifierInput): SignalModifiers => {
   // Fear & Greed adjustments
   if (fearGreed !== null) {
     if (fearGreed < fg.extremeFearThreshold) {
-      rsiBuyThreshold += fg.rsiBuyAdjust;
-      bbMultiplier += fg.bbMultAdjustFear;
+      positionSizeMultiplier += fg.sizeBoostFear;
+      takeProfitPct += fg.tpBoostFear;
     } else if (fearGreed > fg.extremeGreedThreshold) {
-      rsiBuyThreshold += fg.rsiBuyAdjustGreed;
-      bbMultiplier += fg.bbMultAdjustGreed;
+      positionSizeMultiplier += fg.sizeReduceGreed;
+      stopLossPct += fg.slTightenGreed;
     }
   }
 
@@ -48,9 +46,9 @@ export const calculateModifiers = (input: ModifierInput): SignalModifiers => {
   // Sentiment adjustments
   if (sentiment !== null) {
     if (sentiment < st.negativeThreshold) {
-      positionSizeMultiplier -= Math.abs(sentiment) * st.bearishMultiplier;
+      positionSizeMultiplier += st.bearishSizeAdjust;
     } else if (sentiment > st.positiveThreshold) {
-      positionSizeMultiplier += sentiment * st.bullishMultiplier;
+      positionSizeMultiplier += st.bullishSizeAdjust;
     }
   }
 
@@ -60,15 +58,15 @@ export const calculateModifiers = (input: ModifierInput): SignalModifiers => {
 
     switch (regime) {
       case 'trending-up':
-        trailingStopPct += rg.trendingUpStopAdjust * scale;
+        positionSizeMultiplier += rg.trendingUpSizeAdjust * scale;
+        takeProfitPct += rg.trendingUpTpAdjust * scale;
         break;
       case 'trending-down':
-        trailingStopPct += rg.trendingDownStopAdjust * scale;
         positionSizeMultiplier += rg.trendingDownSizeAdjust * scale;
+        stopLossPct += rg.trendingDownSlAdjust * scale;
         break;
       case 'volatile-expansion':
-        trailingStopPct += rg.volatileExpansionStopAdjust * scale;
-        bbMultiplier += rg.volatileExpansionBbAdjust * scale;
+        stopLossPct += rg.volatileExpansionSlAdjust * scale;
         break;
       case 'volatile-compression':
         positionSizeMultiplier += rg.volatileCompressionSizeAdjust * scale;
@@ -80,14 +78,12 @@ export const calculateModifiers = (input: ModifierInput): SignalModifiers => {
   // Clamp all values
   const c = MODIFIERS.clamps;
   return {
-    bbMultiplier: clamp(bbMultiplier, c.bbMultiplier.min, c.bbMultiplier.max),
-    rsiBuyThreshold: clamp(rsiBuyThreshold, c.rsiBuy.min, c.rsiBuy.max),
-    rsiSellThreshold: clamp(rsiSellThreshold, c.rsiSell.min, c.rsiSell.max),
     positionSizeMultiplier: clamp(
       positionSizeMultiplier,
       c.positionSizeMultiplier.min,
       c.positionSizeMultiplier.max,
     ),
-    trailingStopPct: clamp(trailingStopPct, c.trailingStopPct.min, c.trailingStopPct.max),
+    takeProfitPct: clamp(takeProfitPct, c.takeProfitPct.min, c.takeProfitPct.max),
+    stopLossPct: clamp(stopLossPct, c.stopLossPct.min, c.stopLossPct.max),
   };
 };

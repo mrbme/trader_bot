@@ -38,6 +38,8 @@ type PlaceOrderParams = {
   side: 'buy' | 'sell';
   notional?: string;
   qty?: string;
+  type?: 'market' | 'limit';
+  limitPrice?: string;
 };
 
 export const getAccount = async (): Promise<Account> => alpacaFetch<Account>('/v2/account');
@@ -46,15 +48,21 @@ export const getPositions = async (): Promise<Position[]> =>
   alpacaFetch<Position[]>('/v2/positions');
 
 export const placeOrder = async (params: PlaceOrderParams): Promise<Order> => {
+  const orderType = params.type ?? 'market';
+
   const body: Record<string, string> = {
     symbol: params.symbol,
     side: params.side,
-    type: 'market',
+    type: orderType,
     time_in_force: 'gtc',
   };
 
   if (params.notional) body.notional = params.notional;
   else if (params.qty) body.qty = params.qty;
+
+  if (orderType === 'limit' && params.limitPrice) {
+    body.limit_price = params.limitPrice;
+  }
 
   return alpacaFetch<Order>('/v2/orders', 'paper', {
     method: 'POST',

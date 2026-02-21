@@ -1,60 +1,22 @@
-import { TARGET_WEIGHTS, RISK, SYMBOLS } from '@/utils/config.ts';
-import type { Symbol } from '@/utils/config.ts';
+import { RISK, SCALP } from '@/utils/config.ts';
 
-export type PositionInfo = {
-  symbol: Symbol;
-  marketValue: number;
-  qty: number;
-  currentPrice: number;
-};
-
-export const calculatePositionSize = (
-  symbol: Symbol,
+export const calculateScalpSize = (
   equity: number,
-  currentPositionValue: number,
+  score: number,
+  sizeMultiplier: number,
 ): number => {
-  const targetValue = equity * TARGET_WEIGHTS[symbol];
-  const buyAmount = targetValue - currentPositionValue;
+  // Score-proportional sizing: higher score = larger position
+  // Base: score / entryThreshold ratio, capped at 1.0
+  const scoreRatio = Math.min(score / SCALP.entryThreshold, 2.0);
+  const basePct = RISK.maxEquityPerScalp * (scoreRatio / 2.0);
 
-  if (buyAmount < RISK.minOrderNotional) return 0;
+  let notional = equity * basePct * sizeMultiplier;
 
-  const maxAllowed = equity * RISK.maxPositionWeight - currentPositionValue;
-  return Math.min(buyAmount, Math.max(maxAllowed, 0));
-};
+  // Cap at max equity per scalp
+  const maxNotional = equity * RISK.maxEquityPerScalp;
+  notional = Math.min(notional, maxNotional);
 
-export type RebalanceAction = {
-  symbol: Symbol;
-  side: 'buy' | 'sell';
-  notional: number;
-};
+  if (notional < RISK.minOrderNotional) return 0;
 
-export const calculateRebalance = (
-  equity: number,
-  positions: PositionInfo[],
-): RebalanceAction[] => {
-  const actions: RebalanceAction[] = [];
-  const positionMap = new Map(positions.map((p) => [p.symbol, p]));
-
-  for (const symbol of SYMBOLS) {
-    const pos = positionMap.get(symbol);
-    const currentValue = pos?.marketValue ?? 0;
-    const currentWeight = equity > 0 ? currentValue / equity : 0;
-    const targetWeight = TARGET_WEIGHTS[symbol];
-    const drift = Math.abs(currentWeight - targetWeight);
-
-    if (drift < RISK.rebalanceDriftPct) continue;
-
-    const targetValue = equity * targetWeight;
-    const diff = targetValue - currentValue;
-
-    if (Math.abs(diff) < RISK.minOrderNotional) continue;
-
-    actions.push({
-      symbol,
-      side: diff > 0 ? 'buy' : 'sell',
-      notional: Math.abs(diff),
-    });
-  }
-
-  return actions;
+  return notional;
 };
