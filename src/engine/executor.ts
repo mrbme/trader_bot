@@ -40,7 +40,8 @@ export const executeScalpEntry = async (
   });
 
   const filledPrice = order.filled_avg_price ? parseFloat(order.filled_avg_price) : entryPrice;
-  const filledQty = order.filled_qty ? parseFloat(order.filled_qty) : notional / entryPrice;
+  const parsedQty = order.filled_qty ? parseFloat(order.filled_qty) : 0;
+  const filledQty = parsedQty > 0 ? parsedQty : notional / filledPrice;
   const now = Date.now();
 
   const scalp: ScalpPosition = {
@@ -101,6 +102,12 @@ export const executeScalpExit = async (
   logger.info(
     `SCALP EXIT ${scalp.symbol} qty=${scalp.qty.toFixed(6)} @ $${exitPrice.toFixed(2)} | reason=${exitReason} | entry=$${scalp.entryPrice.toFixed(2)}`,
   );
+
+  if (scalp.qty <= 0) {
+    logger.warn(`Skipping exit order for ${scalp.id}: qty is ${scalp.qty}`);
+    closeScalp(scalp.id, exitPrice, exitReason);
+    return;
+  }
 
   const order = await placeOrder({
     symbol: scalp.symbol,
