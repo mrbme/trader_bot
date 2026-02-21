@@ -166,9 +166,9 @@ export const calculateRSIScore = (rsi: number): number => {
 export const calculateSpreadScore = (spread: number, midPrice: number): number => {
   if (midPrice === 0) return 0;
   const spreadPct = spread / midPrice;
-  // Tight spread (< 0.01%) -> +1, wide spread (> 0.05%) -> -1
-  if (spreadPct <= 0.0001) return 1;
-  if (spreadPct >= 0.0005) return -1;
+  // Tight spread (< 0.05%) -> +1, wide spread (> 0.5%) -> -1
+  if (spreadPct <= 0.0005) return 1;
+  if (spreadPct >= 0.005) return -1;
   // Linear interpolation between thresholds
-  return 1 - ((spreadPct - 0.0001) / (0.0005 - 0.0001)) * 2;
+  return 1 - ((spreadPct - 0.0005) / (0.005 - 0.0005)) * 2;
 };
