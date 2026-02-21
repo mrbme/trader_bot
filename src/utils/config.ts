@@ -24,7 +24,7 @@ export const SCALP = {
   loopIntervalMs: 30 * 1000,
   barsTimeframe: '1Min',
   barsLimit: 100,
-  entryThreshold: 0.3,
+  entryThreshold: 0.15,
   exitReversalThreshold: -0.2,
   takeProfitPct: 0.003,
   stopLossPct: 0.002,
